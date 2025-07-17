@@ -31,9 +31,7 @@ export class PostService {
 
   async findSavedPostsByUserId(userId: number) {
     const user = await this.userRepository.findOne({
-      where: {
-        user_id: userId,
-      },
+      where: { user_id: userId },
     });
 
     if (!user) {

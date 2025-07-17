@@ -4,9 +4,9 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
-import { UserResponseDto } from './dto/user-response.dto';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { Response } from 'express';
 
 @Injectable()
 export class UserService {
@@ -38,13 +38,19 @@ export class UserService {
     );
   }
 
-  async createUser(createUserDto: CreateUserDto) {
+  async createUser(createUserDto: CreateUserDto, response: Response) {
     const user = this.userRepository.create(createUserDto);
     await this.userRepository.save(user);
 
+    const refreshToken = await this.issueToken(user, true);
+    const accessToken = await this.issueToken(user, false);
+
+    response.cookie('refreshToken', refreshToken);
+    response.cookie('accessToken', accessToken);
+
     return {
-      refreshToken: await this.issueToken(user, true),
-      accessToken: await this.issueToken(user, false),
+      refreshToken,
+      accessToken,
     };
   }
 
