@@ -21,25 +21,30 @@ export class PostController {
   }
 
   @Get()
-  findAllPosts() {
-    return this.postService.findAllPosts();
+  async findAllPosts() {
+    return await this.postService.findAllPosts();
   }
 
-  @Get(':id')
-  finfindPostByIddOne(@Param('id') id: string) {
-    return this.postService.findPostById(+id);
+  @Get('saves') // :user_id 추가
+  async findSavedPostsByUserId() {
+    return await this.postService.findSavedPostsByUserId();
   }
 
-  @Patch(':id')
-  updatePostById(
-    @Param('id') id: string,
+  @Get(':post_id')
+  async findPostByIddOne(@Param('post_id') id: string) {
+    return await this.postService.findPostById(+id);
+  }
+
+  @Patch(':post_id')
+  async updatePostById(
+    @Param('post_id') id: string,
     @Body() updatePostDto: UpdatePostDto,
   ) {
-    return this.postService.updatePostById(+id, updatePostDto);
+    return await this.postService.updatePostById(+id, updatePostDto);
   }
 
-  @Delete(':id')
-  deletePostById(@Param('id') id: string) {
-    return this.postService.deletePostById(+id);
+  @Delete(':post_id')
+  async deletePostById(@Param('post_id') id: string) {
+    return await this.postService.deletePostById(+id);
   }
 }

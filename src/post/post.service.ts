@@ -25,19 +25,29 @@ export class PostService {
     return posts;
   }
 
-  async findPostById(id: number) {
+  async findSavedPostsByUserId() {
+    const posts = await this.postRepository.find({
+      where: {
+        is_uploaded: false,
+      },
+    });
+
+    return posts;
+  }
+
+  async findPostById(post_id: number) {
     const post = await this.postRepository.findOne({
       where: {
-        id: id,
+        id: post_id,
       },
     });
     return post;
   }
 
-  async updatePostById(id: number, updatePostDto: UpdatePostDto) {
+  async updatePostById(post_id: number, updatePostDto: UpdatePostDto) {
     const post = await this.postRepository.findOne({
       where: {
-        id: id,
+        id: post_id,
       },
     });
 
@@ -45,15 +55,15 @@ export class PostService {
       throw new NotFoundException('아이디에 해당하는 포스트가 없습니다.');
     }
 
-    await this.postRepository.update({ id }, { ...updatePostDto });
+    await this.postRepository.update({ id: post_id }, { ...updatePostDto });
 
-    return id;
+    return post_id;
   }
 
-  async deletePostById(id: number) {
+  async deletePostById(post_id: number) {
     const post = await this.postRepository.findOne({
       where: {
-        id: id,
+        id: post_id,
       },
     });
 
@@ -62,11 +72,11 @@ export class PostService {
     }
 
     await this.postRepository.update(
-      { id },
+      { id: post_id },
       {
         is_deleted: true,
       },
     );
-    return id;
+    return post_id;
   }
 }
