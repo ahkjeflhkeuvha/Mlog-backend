@@ -1,34 +1,55 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 
-@Controller('post')
+@Controller('posts')
 export class PostController {
   constructor(private readonly postService: PostService) {}
 
   @Post()
-  create(@Body() createPostDto: CreatePostDto) {
-    return this.postService.create(createPostDto);
+  async createPost(@Body() createPostDto: CreatePostDto) {
+    return await this.postService.createPost(createPostDto);
   }
 
   @Get()
-  findAll() {
-    return this.postService.findAll();
+  async findAllPosts() {
+    return await this.postService.findAllPosts();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.postService.findOne(+id);
+  @Get('saves') // :user_id 추가
+  async findSavedPostsByUserId() {
+    return await this.postService.findSavedPostsByUserId();
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePostDto: UpdatePostDto) {
-    return this.postService.update(+id, updatePostDto);
+  @Get(':post_id')
+  async findPostById(@Param('post_id') post_id: string) {
+    return await this.postService.findPostById(+post_id);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.postService.remove(+id);
+  @Get(':user_id/posts')
+  async getAllPostsByUserId(@Param('user_id') user_id: number) {
+    return await this.postService.getAllPostsByUserId(+user_id);
+  }
+
+  @Patch(':post_id')
+  async updatePostById(
+    @Param('post_id') id: string,
+    @Body() updatePostDto: UpdatePostDto,
+  ) {
+    return await this.postService.updatePostById(+id, updatePostDto);
+  }
+
+  @Delete(':post_id')
+  async deletePostById(@Param('post_id') id: string) {
+    return await this.postService.deletePostById(+id);
   }
 }
