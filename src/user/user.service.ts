@@ -1,26 +1,68 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { User } from './entities/user.entity';
+import { Repository } from 'typeorm';
+import { UserResponseDto } from './dto/user-response.dto';
 
 @Injectable()
 export class UserService {
-  create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
+  constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+  ) {}
+
+  async createUser(createUserDto: CreateUserDto) {
+    const user = this.userRepository.create(createUserDto);
+    await this.userRepository.save(user);
+
+    return UserResponseDto.builder(user.user_id);
   }
 
-  findAll() {
-    return `This action returns all user`;
+  async getUserInfoByUserId(user_id: number) {
+    const user = await this.userRepository.findOne({
+      where: {
+        user_id,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('해당하는 아이디의 유저가 없습니다.');
+    }
+
+    return user;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
+  async updateUserInfo(user_id: number, updateUserDto: UpdateUserDto) {
+    const user = await this.userRepository.findOne({
+      where: {
+        user_id,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('해당하는 아이디의 유저가 없습니다.');
+    }
+
+    await this.userRepository.update({ user_id }, { ...updateUserDto });
+
+    return user_id;
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
-  }
+  async removeUser(user_id: number) {
+    const user = await this.userRepository.findOne({
+      where: {
+        user_id,
+      },
+    });
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+    if (!user) {
+      throw new NotFoundException('해당하는 아이디의 유저가 없습니다.');
+    }
+
+    await this.userRepository.delete({ user_id });
+
+    return user_id;
   }
 }
