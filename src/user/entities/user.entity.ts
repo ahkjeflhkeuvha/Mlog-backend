@@ -8,11 +8,13 @@ export class User {
 
   @Column({
     unique: true,
+    nullable: false,
   })
   nickname: string;
 
   @Column({
     unique: true,
+    nullable: false,
   })
   email: string;
 

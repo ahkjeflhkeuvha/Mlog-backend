@@ -6,10 +6,13 @@ import {
   Patch,
   Param,
   Delete,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { JwtAuthGuard } from 'src/middleware/jwt-auth.guard';
 
 @Controller('posts')
 export class PostController {
@@ -25,9 +28,11 @@ export class PostController {
     return await this.postService.findAllPosts();
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('saves') // :user_id 추가
-  async findSavedPostsByUserId() {
-    return await this.postService.findSavedPostsByUserId();
+  async findSavedPostsByUserId(@Req() req: Request) {
+    // const userId = req.user?.sub;
+    return await this.postService.findSavedPostsByUserId(1);
   }
 
   @Get(':post_id')

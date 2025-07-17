@@ -5,19 +5,47 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import { UserResponseDto } from './dto/user-response.dto';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly configService: ConfigService,
+    private readonly jwtService: JwtService,
   ) {}
+
+  async issueToken(user: User, isRefresh: boolean): Promise<string> {
+    const refreshTokenSecret = this.configService.get<string>(
+      'REFRESH_TOKEN_SECRET',
+    );
+    const accessTokenSecret = this.configService.get<string>(
+      'ACCESS_TOKEN_SECRET',
+    );
+
+    return await this.jwtService.signAsync(
+      {
+        sub: user.user_id,
+        nickname: user.nickname,
+        type: isRefresh ? 'refresh' : 'access',
+      },
+      {
+        secret: isRefresh ? refreshTokenSecret : accessTokenSecret,
+        expiresIn: isRefresh ? '1m' : 300,
+      },
+    );
+  }
 
   async createUser(createUserDto: CreateUserDto) {
     const user = this.userRepository.create(createUserDto);
     await this.userRepository.save(user);
 
-    return UserResponseDto.builder(user.user_id);
+    return {
+      refreshToken: await this.issueToken(user, true),
+      accessToken: await this.issueToken(user, false),
+    };
   }
 
   async getUserInfoByUserId(user_id: number) {
@@ -31,7 +59,10 @@ export class UserService {
       throw new NotFoundException('해당하는 아이디의 유저가 없습니다.');
     }
 
-    return user;
+    return {
+      refreshToken: await this.issueToken(user, true),
+      accessToken: await this.issueToken(user, false),
+    };
   }
 
   async updateUserInfo(user_id: number, updateUserDto: UpdateUserDto) {

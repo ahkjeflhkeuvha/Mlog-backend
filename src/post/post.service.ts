@@ -29,10 +29,21 @@ export class PostService {
     return posts;
   }
 
-  async findSavedPostsByUserId() {
+  async findSavedPostsByUserId(userId: number) {
+    const user = await this.userRepository.findOne({
+      where: {
+        user_id: userId,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('해당 아이디에 일치하는 사용자가 없습니다.');
+    }
+
     const posts = await this.postRepository.find({
       where: {
         is_uploaded: false,
+        user,
       },
     });
 
