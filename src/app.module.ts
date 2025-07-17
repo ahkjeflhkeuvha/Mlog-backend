@@ -12,6 +12,7 @@ import { ContentModule } from './content/content.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import * as Joi from 'joi';
+import { Post } from './post/entities/post.entity';
 
 @Module({
   imports: [
@@ -34,7 +35,7 @@ import * as Joi from 'joi';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_DATABASE'),
-        entities: [__dirname + '/**/*.entity.ts'],
+        entities: [__dirname + '/**/*.entity.ts', Post],
         synchronize: true, // 테스트일 경우 true 설정
       }),
       inject: [ConfigService],
