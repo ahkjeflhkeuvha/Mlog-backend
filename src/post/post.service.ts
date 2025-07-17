@@ -5,12 +5,16 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Post } from './entities/post.entity';
 import { PostResponseDto } from './dto/post-response.dto';
+import { User } from 'src/user/entities/user.entity';
 
 @Injectable()
 export class PostService {
   constructor(
     @InjectRepository(Post)
     private readonly postRepository: Repository<Post>,
+
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
   ) {}
 
   async createPost(createPostDto: CreatePostDto) {
@@ -42,6 +46,28 @@ export class PostService {
       },
     });
     return post;
+  }
+
+  async getAllPostsByUserId(user_id: number) {
+    const user = await this.userRepository.findOne({
+      where: {
+        user_id,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(
+        '해당하는 아이디의 사용자를 찾을 수 없습니다.',
+      );
+    }
+
+    const posts = await this.postRepository.find({
+      where: {
+        user,
+      },
+    });
+
+    return posts;
   }
 
   async updatePostById(post_id: number, updatePostDto: UpdatePostDto) {

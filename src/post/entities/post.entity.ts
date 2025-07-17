@@ -1,7 +1,9 @@
+import { User } from 'src/user/entities/user.entity';
 import {
   Column,
   CreateDateColumn,
   Entity,
+  ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
@@ -28,4 +30,6 @@ export class Post {
   // board_id : ManyToOne
 
   // user_id : ManyToOne
+  @ManyToOne(() => User, (user) => user.posts)
+  user: User;
 }

@@ -31,8 +31,13 @@ export class PostController {
   }
 
   @Get(':post_id')
-  async findPostByIddOne(@Param('post_id') id: string) {
-    return await this.postService.findPostById(+id);
+  async findPostById(@Param('post_id') post_id: string) {
+    return await this.postService.findPostById(+post_id);
+  }
+
+  @Get(':user_id/posts')
+  async getAllPostsByUserId(@Param('user_id') user_id: number) {
+    return await this.postService.getAllPostsByUserId(+user_id);
   }
 
   @Patch(':post_id')
