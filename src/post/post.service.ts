@@ -6,7 +6,14 @@ import { Repository } from 'typeorm';
 import { Post } from './entities/post.entity';
 import { PostResponseDto } from './dto/post-response.dto';
 import { User } from 'src/user/entities/user.entity';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 
+interface JwtPayload {
+  sub: number;
+  email: string;
+  type: string;
+}
 @Injectable()
 export class PostService {
   constructor(
@@ -15,10 +22,30 @@ export class PostService {
 
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+
+    private readonly jwtService: JwtService,
+
+    private readonly configService: ConfigService,
   ) {}
 
-  async createPost(createPostDto: CreatePostDto) {
-    const newPost = this.postRepository.create(createPostDto);
+  async createPost(createPostDto: CreatePostDto, token: string) {
+    const payload: JwtPayload = await this.jwtService.verifyAsync(token, {
+      secret: this.configService.get<string>('ACCESS_TOKEN_SECRET'),
+    });
+
+    const user = await this.userRepository.findOne({
+      where: { user_id: payload.sub },
+    });
+
+    if (!user) {
+      throw new NotFoundException('사용 가능한 토큰이 아닙니다.');
+    }
+
+    const newPost = this.postRepository.create({
+      ...createPostDto,
+      user, // user 관계성 추가
+    });
+
     const post = await this.postRepository.save(newPost);
 
     return PostResponseDto.builder(post.id);
@@ -29,9 +56,13 @@ export class PostService {
     return posts;
   }
 
-  async findSavedPostsByUserId(userId: number) {
+  async findSavedPostsByUserId(token: string) {
+    const payload: JwtPayload = await this.jwtService.verifyAsync(token, {
+      secret: this.configService.get<string>('ACCESS_TOKEN_SECRET'),
+    });
+
     const user = await this.userRepository.findOne({
-      where: { user_id: userId },
+      where: { user_id: payload.sub },
     });
 
     if (!user) {

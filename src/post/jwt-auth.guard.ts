@@ -1,7 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 
-interface JwtPayload {
+export interface JwtPayloadInterface {
   sub: number;
   nickname: string;
   type: 'access' | 'refresh';
@@ -17,7 +17,7 @@ export class JwtAuthGuard implements CanActivate {
     if (!access_token) return false;
 
     try {
-      const user = this.jwtService.verify<JwtPayload>(access_token);
+      const user = this.jwtService.verify<JwtPayloadInterface>(access_token);
       request.user = user;
       return true;
     } catch {

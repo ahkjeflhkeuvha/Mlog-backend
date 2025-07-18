@@ -17,8 +17,11 @@ export class PostController {
   constructor(private readonly postService: PostService) {}
 
   @Post()
-  async createPost(@Body() createPostDto: CreatePostDto) {
-    return await this.postService.createPost(createPostDto);
+  async createPost(@Body() createPostDto: CreatePostDto, @Req() req) {
+    return await this.postService.createPost(
+      createPostDto,
+      req.cookies.accessToken,
+    );
   }
 
   @Get()
@@ -28,8 +31,9 @@ export class PostController {
 
   @Get('saves') // :user_id 추가
   async findSavedPostsByUserId(@Req() req) {
-    console.log(req.cookies);
-    return await this.postService.findSavedPostsByUserId(15);
+    return await this.postService.findSavedPostsByUserId(
+      req.cookies.accessToken,
+    );
   }
 
   @Get(':post_id')

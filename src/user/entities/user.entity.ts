@@ -32,4 +32,7 @@ export class User {
 
   @OneToMany(() => Post, (post) => post.user)
   posts: Post[];
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  refresh_token: string;
 }

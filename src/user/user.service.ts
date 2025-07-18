@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -7,6 +11,7 @@ import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Response } from 'express';
+import { JwtPayloadInterface } from 'src/post/jwt-auth.guard';
 
 @Injectable()
 export class UserService {
@@ -40,7 +45,6 @@ export class UserService {
 
   async createUser(createUserDto: CreateUserDto, response: Response) {
     const user = this.userRepository.create(createUserDto);
-    await this.userRepository.save(user);
 
     const refreshToken = await this.issueToken(user, true);
     const accessToken = await this.issueToken(user, false);
@@ -48,10 +52,105 @@ export class UserService {
     response.cookie('refreshToken', refreshToken);
     response.cookie('accessToken', accessToken);
 
+    user.refresh_token = refreshToken;
+
+    await this.userRepository.save(user);
+
     return {
       refreshToken,
       accessToken,
     };
+  }
+
+  async login(email: string, response: Response) {
+    const user = await this.userRepository.findOne({
+      where: {
+        email: email,
+      },
+    });
+
+    if (!user) {
+      throw new Error('해당하는 이메일의 사용자가 없습니다.');
+    }
+
+    const refreshToken = await this.issueToken(user, true);
+    const accessToken = await this.issueToken(user, false);
+
+    // 로그인 시 로그인 토큰 갱신
+    await this.userRepository.update(
+      { email },
+      {
+        refresh_token: refreshToken,
+      },
+    );
+
+    response.cookie('refreshToken', refreshToken);
+    response.cookie('accessToken', accessToken);
+
+    const updatedUser = await this.userRepository.findOne({
+      where: {
+        email: email,
+      },
+    });
+
+    return updatedUser;
+  }
+
+  async logout(email: string, response: Response) {
+    const user = await this.userRepository.findOne({
+      where: {
+        email: email,
+      },
+    });
+
+    if (!user) {
+      throw new Error('해당하는 이메일의 사용자가 없습니다.');
+    }
+
+    await this.userRepository.update(
+      { email: email },
+      {
+        refresh_token: '',
+      },
+    );
+
+    response.clearCookie('refreshToken');
+    response.clearCookie('accessToken');
+  }
+
+  async refreshAccessToken(refreshToken: string, response: Response) {
+    try {
+      const payload: JwtPayloadInterface = await this.jwtService.verifyAsync(
+        refreshToken,
+        {
+          secret: this.configService.get('REFRESH_TOKEN_SECRET'),
+        },
+      );
+
+      const user = await this.userRepository.findOne({
+        where: { user_id: payload.sub },
+      });
+
+      if (!user || user.refresh_token !== refreshToken) {
+        throw new UnauthorizedException('유효하지 않은 refreshToken입니다.');
+      }
+
+      const newAccessToken = await this.issueToken(user, false);
+      const newRefreshToken = await this.issueToken(user, true);
+
+      // refreshToken도 주기적으로 갱신
+      user.refresh_token = newRefreshToken;
+      await this.userRepository.save(user);
+
+      response.cookie('accessToken', newAccessToken);
+      response.cookie('refreshToken', newRefreshToken);
+
+      return response.send({ accessToken: newAccessToken });
+    } catch (err) {
+      throw new UnauthorizedException(
+        'refreshToken이 만료되었거나 잘못되었습니다.',
+      );
+    }
   }
 
   async getUserInfoByUserId(user_id: number) {
