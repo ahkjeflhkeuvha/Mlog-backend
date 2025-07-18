@@ -50,8 +50,6 @@ export class UserController {
   refreshAccessToken(@Req() req: Request, @Res() res: Response) {
     const refreshToken = req.cookies.refreshToken;
 
-    console.log(refreshToken);
-
     if (!refreshToken) {
       throw new UnauthorizedException('리프레시 토큰이 없습니다.');
     }

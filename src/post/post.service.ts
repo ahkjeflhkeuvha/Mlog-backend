@@ -38,7 +38,6 @@ export class PostService {
     refreshToken: string,
     res: Response,
   ) {
-    console.log(accessToken);
     try {
       const payload: JwtPayloadInterface = await this.jwtService.verifyAsync(
         accessToken,
@@ -83,27 +82,51 @@ export class PostService {
     return posts;
   }
 
-  async findSavedPostsByUserId(token: string) {
-    const payload: JwtPayload = await this.jwtService.verifyAsync(token, {
-      secret: this.configService.get<string>('ACCESS_TOKEN_SECRET'),
-    });
+  async findPostsByTypeAndUser(
+    type: string,
+    accessToken: string,
+    refreshToken: string,
+    res: Response,
+  ) {
+    try {
+      const payload: JwtPayloadInterface = await this.jwtService.verifyAsync(
+        accessToken,
+        {
+          secret: this.configService.get<string>('ACCESS_TOKEN_SECRET'),
+        },
+      );
 
-    const user = await this.userRepository.findOne({
-      where: { user_id: payload.sub },
-    });
+      const user = await this.userRepository.findOne({
+        where: { user_id: payload.sub },
+      });
 
-    if (!user) {
-      throw new NotFoundException('해당 아이디에 일치하는 사용자가 없습니다.');
+      if (!user) {
+        throw new NotFoundException(
+          '해당 아이디에 일치하는 사용자가 없습니다.',
+        );
+      }
+
+      const posts = await this.postRepository.find({
+        where: {
+          is_uploaded: type === 'uploaded' ? true : false,
+          user,
+        },
+      });
+
+      return posts;
+    } catch (err) {
+      const newAccessToken = await this.userService.refreshAccessToken(
+        refreshToken,
+        res,
+      );
+      console.log('test ; ', newAccessToken);
+      return await this.findPostsByTypeAndUser(
+        type,
+        newAccessToken,
+        refreshToken,
+        res,
+      );
     }
-
-    const posts = await this.postRepository.find({
-      where: {
-        is_uploaded: false,
-        user,
-      },
-    });
-
-    return posts;
   }
 
   async findPostById(post_id: number) {

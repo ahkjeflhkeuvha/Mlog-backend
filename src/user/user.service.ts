@@ -142,7 +142,7 @@ export class UserService {
 
       response.cookie('accessToken', newAccessToken);
 
-      console.log(newAccessToken);
+      // console.log(newAccessToken);
 
       return newAccessToken;
     } catch (err) {
