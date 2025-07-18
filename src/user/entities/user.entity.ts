@@ -1,3 +1,4 @@
+import { Exclude } from 'class-transformer';
 import { Post } from 'src/post/entities/post.entity';
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
@@ -34,5 +35,6 @@ export class User {
   posts: Post[];
 
   @Column({ type: 'varchar', length: 500, nullable: true })
+  @Exclude() // 민감한 정보니 제외
   refresh_token: string;
 }
