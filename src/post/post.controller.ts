@@ -6,18 +6,30 @@ import {
   Patch,
   Param,
   Delete,
+  Req,
+  Res,
 } from '@nestjs/common';
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { Response, Request } from 'express';
 
 @Controller('posts')
 export class PostController {
   constructor(private readonly postService: PostService) {}
 
   @Post()
-  async createPost(@Body() createPostDto: CreatePostDto) {
-    return await this.postService.createPost(createPostDto);
+  async createPost(
+    @Body() createPostDto: CreatePostDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return await this.postService.createPost(
+      createPostDto,
+      req.cookies.accessToken,
+      req.cookies.refreshToken,
+      res,
+    );
   }
 
   @Get()
@@ -25,9 +37,18 @@ export class PostController {
     return await this.postService.findAllPosts();
   }
 
-  @Get('saves') // :user_id 추가
-  async findSavedPostsByUserId() {
-    return await this.postService.findSavedPostsByUserId();
+  @Get(':type') // :user_id 추가
+  async findSavedPostsByUserId(
+    @Param('type') type: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return await this.postService.findPostsByTypeAndUser(
+      type,
+      req.cookies.accessToken,
+      req.cookies.refreshToken,
+      res,
+    );
   }
 
   @Get(':post_id')

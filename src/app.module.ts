@@ -14,6 +14,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import * as Joi from 'joi';
 import { Post } from './post/entities/post.entity';
 import { User } from './user/entities/user.entity';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   imports: [
@@ -37,7 +38,7 @@ import { User } from './user/entities/user.entity';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_DATABASE'),
         entities: [Post, User],
-        synchronize: true, // 테스트일 경우 true 설정
+        synchronize: false, // 테스트일 경우 true 설정
       }),
       inject: [ConfigService],
     }),
