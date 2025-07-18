@@ -119,7 +119,7 @@ export class PostService {
         refreshToken,
         res,
       );
-      console.log('test ; ', newAccessToken);
+
       return await this.findPostsByTypeAndUser(
         type,
         newAccessToken,
@@ -130,11 +130,14 @@ export class PostService {
   }
 
   async findPostById(post_id: number) {
+    console.log('ㅅㅅ');
     const post = await this.postRepository.findOne({
       where: {
         id: post_id,
       },
+      relations: ['comments'],
     });
+
     return post;
   }
 
