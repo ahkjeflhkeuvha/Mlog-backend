@@ -4,10 +4,25 @@ import { PostController } from './post.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Post } from './entities/post.entity';
 import { User } from 'src/user/entities/user.entity';
+import { ConfigService, ConfigModule } from '@nestjs/config';
+import { JwtService, JwtModule } from '@nestjs/jwt';
+import { UserService } from 'src/user/user.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Post, User])],
+  imports: [
+    TypeOrmModule.forFeature([Post, User]),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get('ACCESS_TOKEN_SECRET'),
+        signOptions: {
+          expiresIn: `5m`,
+        },
+      }),
+    }),
+  ],
   controllers: [PostController],
-  providers: [PostService],
+  providers: [PostService, UserService, ConfigService, JwtService],
 })
 export class PostModule {}
