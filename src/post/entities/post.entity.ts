@@ -30,6 +30,6 @@ export class Post {
   // board_id : ManyToOne
 
   // user_id : ManyToOne
-  @ManyToOne(() => User, (user) => user.posts)
+  @ManyToOne(() => User, (user) => user.posts, { eager: true })
   user: User;
 }

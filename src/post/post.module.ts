@@ -6,6 +6,7 @@ import { Post } from './entities/post.entity';
 import { User } from 'src/user/entities/user.entity';
 import { ConfigService, ConfigModule } from '@nestjs/config';
 import { JwtService, JwtModule } from '@nestjs/jwt';
+import { UserService } from 'src/user/user.service';
 
 @Module({
   imports: [
@@ -14,14 +15,14 @@ import { JwtService, JwtModule } from '@nestjs/jwt';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get('JWT_SECRET'),
+        secret: configService.get('ACCESS_TOKEN_SECRET'),
         signOptions: {
-          expiresIn: `30s`,
+          expiresIn: `5m`,
         },
       }),
     }),
   ],
   controllers: [PostController],
-  providers: [PostService, ConfigService, JwtService],
+  providers: [PostService, UserService, ConfigService, JwtService],
 })
 export class PostModule {}

@@ -7,20 +7,28 @@ import {
   Param,
   Delete,
   Req,
+  Res,
 } from '@nestjs/common';
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { Response, Request } from 'express';
 
 @Controller('posts')
 export class PostController {
   constructor(private readonly postService: PostService) {}
 
   @Post()
-  async createPost(@Body() createPostDto: CreatePostDto, @Req() req) {
+  async createPost(
+    @Body() createPostDto: CreatePostDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     return await this.postService.createPost(
       createPostDto,
       req.cookies.accessToken,
+      req.cookies.refreshToken,
+      res,
     );
   }
 

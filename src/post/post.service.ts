@@ -8,6 +8,9 @@ import { PostResponseDto } from './dto/post-response.dto';
 import { User } from 'src/user/entities/user.entity';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { UserService } from 'src/user/user.service';
+import { Response } from 'express';
+import { JwtPayloadInterface } from './jwt-auth.guard';
 
 interface JwtPayload {
   sub: number;
@@ -26,29 +29,53 @@ export class PostService {
     private readonly jwtService: JwtService,
 
     private readonly configService: ConfigService,
+    private readonly userService: UserService,
   ) {}
 
-  async createPost(createPostDto: CreatePostDto, token: string) {
-    const payload: JwtPayload = await this.jwtService.verifyAsync(token, {
-      secret: this.configService.get<string>('ACCESS_TOKEN_SECRET'),
-    });
+  async createPost(
+    createPostDto: CreatePostDto,
+    accessToken: string,
+    refreshToken: string,
+    res: Response,
+  ) {
+    console.log(accessToken);
+    try {
+      const payload: JwtPayloadInterface = await this.jwtService.verifyAsync(
+        accessToken,
+        {
+          secret: this.configService.get<string>('ACCESS_TOKEN_SECRET'),
+        },
+      );
 
-    const user = await this.userRepository.findOne({
-      where: { user_id: payload.sub },
-    });
+      const user = await this.userRepository.findOne({
+        where: { user_id: payload.sub },
+      });
 
-    if (!user) {
-      throw new NotFoundException('사용 가능한 토큰이 아닙니다.');
+      if (!user) {
+        throw new NotFoundException('사용 가능한 토큰이 아닙니다.');
+      }
+
+      const newPost = this.postRepository.create({
+        ...createPostDto,
+        user,
+      });
+
+      const post = await this.postRepository.save(newPost);
+
+      return PostResponseDto.builder(post.id);
+    } catch (err) {
+      const newAccessToken = await this.userService.refreshAccessToken(
+        refreshToken,
+        res,
+      );
+
+      return await this.createPost(
+        createPostDto,
+        newAccessToken,
+        refreshToken,
+        res,
+      );
     }
-
-    const newPost = this.postRepository.create({
-      ...createPostDto,
-      user, // user 관계성 추가
-    });
-
-    const post = await this.postRepository.save(newPost);
-
-    return PostResponseDto.builder(post.id);
   }
 
   async findAllPosts() {

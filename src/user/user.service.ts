@@ -38,7 +38,7 @@ export class UserService {
       },
       {
         secret: isRefresh ? refreshTokenSecret : accessTokenSecret,
-        expiresIn: isRefresh ? '1m' : 300,
+        expiresIn: isRefresh ? '30d' : 300,
       },
     );
   }
@@ -136,16 +136,15 @@ export class UserService {
       }
 
       const newAccessToken = await this.issueToken(user, false);
-      const newRefreshToken = await this.issueToken(user, true);
 
       // refreshToken도 주기적으로 갱신
-      user.refresh_token = newRefreshToken;
       await this.userRepository.save(user);
 
       response.cookie('accessToken', newAccessToken);
-      response.cookie('refreshToken', newRefreshToken);
 
-      return response.send({ accessToken: newAccessToken });
+      console.log(newAccessToken);
+
+      return newAccessToken;
     } catch (err) {
       throw new UnauthorizedException(
         'refreshToken이 만료되었거나 잘못되었습니다.',
@@ -158,16 +157,14 @@ export class UserService {
       where: {
         user_id,
       },
+      relations: ['posts'],
     });
 
     if (!user) {
       throw new NotFoundException('해당하는 아이디의 유저가 없습니다.');
     }
 
-    return {
-      refreshToken: await this.issueToken(user, true),
-      accessToken: await this.issueToken(user, false),
-    };
+    return user;
   }
 
   async updateUserInfo(user_id: number, updateUserDto: UpdateUserDto) {
