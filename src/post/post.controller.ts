@@ -37,10 +37,17 @@ export class PostController {
     return await this.postService.findAllPosts();
   }
 
-  @Get('saves') // :user_id 추가
-  async findSavedPostsByUserId(@Req() req) {
-    return await this.postService.findSavedPostsByUserId(
+  @Get(':type') // :user_id 추가
+  async findSavedPostsByUserId(
+    @Param('type') type: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return await this.postService.findPostsByTypeAndUser(
+      type,
       req.cookies.accessToken,
+      req.cookies.refreshToken,
+      res,
     );
   }
 

@@ -34,6 +34,96 @@ export class UserService {
     };
   }
 
+  async login(email: string, response: Response) {
+    const user = await this.userRepository.findOne({
+      where: {
+        email: email,
+      },
+    });
+
+    if (!user) {
+      throw new Error('해당하는 이메일의 사용자가 없습니다.');
+    }
+
+    const refreshToken = await this.issueToken(user, true);
+    const accessToken = await this.issueToken(user, false);
+
+    // 로그인 시 로그인 토큰 갱신
+    await this.userRepository.update(
+      { email },
+      {
+        refresh_token: refreshToken,
+      },
+    );
+
+    response.cookie('refreshToken', refreshToken);
+    response.cookie('accessToken', accessToken);
+
+    const updatedUser = await this.userRepository.findOne({
+      where: {
+        email: email,
+      },
+    });
+
+    return updatedUser;
+  }
+
+  async logout(email: string, response: Response) {
+    const user = await this.userRepository.findOne({
+      where: {
+        email: email,
+      },
+    });
+
+    if (!user) {
+      throw new Error('해당하는 이메일의 사용자가 없습니다.');
+    }
+
+    await this.userRepository.update(
+      { email: email },
+      {
+        refresh_token: '',
+      },
+    );
+
+    response.clearCookie('refreshToken');
+    response.clearCookie('accessToken');
+  }
+
+  async refreshAccessToken(refreshToken: string, response: Response) {
+    try {
+      const payload: JwtPayloadInterface = await this.jwtService.verifyAsync(
+        refreshToken,
+        {
+          secret: this.configService.get('REFRESH_TOKEN_SECRET'),
+        },
+      );
+
+      const user = await this.userRepository.findOne({
+        where: { user_id: payload.sub },
+      });
+
+      if (!user || user.refresh_token !== refreshToken) {
+        throw new UnauthorizedException('유효하지 않은 refreshToken입니다.');
+      }
+
+      const newAccessToken = await this.issueToken(user, false);
+
+      // refreshToken도 주기적으로 갱신
+      await this.userRepository.save(user);
+
+      response.cookie('accessToken', newAccessToken);
+
+      // console.log(newAccessToken);
+
+      return newAccessToken;
+    } catch (err) {
+      throw new UnauthorizedException(
+        'refreshToken이 만료되었거나 잘못되었습니다.',
+      );
+    }
+  }
+
   async getUserInfoByUserId(user_id: number) {
     const user = await this.userRepository.findOne({
       where: {
