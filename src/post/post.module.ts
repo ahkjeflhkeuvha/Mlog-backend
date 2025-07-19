@@ -6,7 +6,7 @@ import { Post } from './entities/post.entity';
 import { User } from 'src/user/entities/user.entity';
 import { ConfigService, ConfigModule } from '@nestjs/config';
 import { JwtService, JwtModule } from '@nestjs/jwt';
-import { UserService } from 'src/user/user.service';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
@@ -21,8 +21,9 @@ import { UserService } from 'src/user/user.service';
         },
       }),
     }),
+    AuthModule,
   ],
   controllers: [PostController],
-  providers: [PostService, UserService, ConfigService, JwtService],
+  providers: [PostService, ConfigService, JwtService],
 })
 export class PostModule {}

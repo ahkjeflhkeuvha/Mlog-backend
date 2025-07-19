@@ -1,56 +1,58 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { User } from './entities/user.entity';
-import { Repository } from 'typeorm';
 import { Response } from 'express';
+import { Profile } from 'passport-google-oauth20';
 import { TokenService } from 'src/token/token.service';
+import { User } from 'src/user/entities/user.entity';
+import { Repository } from 'typeorm';
+
+export interface JwtPayloadInterface {
+  sub: number;
+  nickname: string;
+  type: 'access' | 'refresh';
+}
 
 @Injectable()
-export class UserService {
+export class AuthService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly configService: ConfigService,
     private readonly tokenService: TokenService,
+    private readonly jwtService: JwtService,
   ) {}
 
-  async createUser(createUserDto: CreateUserDto, response: Response) {
-    const user = this.userRepository.create(createUserDto);
+  // strategy 에서 호출
+  validateSocialUser(profile: Profile) {
+    const email = profile.emails?.[0]?.value;
 
-    const refreshToken = await this.tokenService.issueToken(user, true);
-    const accessToken = await this.tokenService.issueToken(user, false);
-
-    response.cookie('refreshToken', refreshToken);
-    response.cookie('accessToken', accessToken);
-
-    user.refresh_token = refreshToken;
-
-    await this.userRepository.save(user);
+    if (!email.endsWith('@e-mirim.hs.kr')) {
+      throw new UnauthorizedException('미림 계정만 로그인할 수 있습니다.');
+    }
 
     return {
-      refreshToken,
-      accessToken,
+      email,
+      profile_img: profile.photos[0].value,
     };
   }
 
   async login(email: string, response: Response) {
     const user = await this.userRepository.findOne({
-      where: {
-        email: email,
-      },
+      where: { email },
     });
 
     if (!user) {
       throw new Error('해당하는 이메일의 사용자가 없습니다.');
     }
 
-    const refreshToken = await this.issueToken(user, true);
-    const accessToken = await this.issueToken(user, false);
+    const refreshToken = await this.tokenService.issueToken(user, true);
+    const accessToken = await this.tokenService.issueToken(user, false);
 
     // 로그인 시 로그인 토큰 갱신
     await this.userRepository.update(
-      { email },
+      { email: user.email },
       {
         refresh_token: refreshToken,
       },
@@ -61,7 +63,7 @@ export class UserService {
 
     const updatedUser = await this.userRepository.findOne({
       where: {
-        email: email,
+        email: user.email,
       },
     });
 
@@ -107,14 +109,14 @@ export class UserService {
         throw new UnauthorizedException('유효하지 않은 refreshToken입니다.');
       }
 
-      const newAccessToken = await this.issueToken(user, false);
+      const newAccessToken = await this.tokenService.issueToken(user, false);
 
       // refreshToken도 주기적으로 갱신
       await this.userRepository.save(user);
 
       response.cookie('accessToken', newAccessToken);
 
-      // console.log(newAccessToken);
+      console.log(newAccessToken);
 
       return newAccessToken;
     } catch (err) {
@@ -122,52 +124,5 @@ export class UserService {
         'refreshToken이 만료되었거나 잘못되었습니다.',
       );
     }
-  }
-
-  async getUserInfoByUserId(user_id: number) {
-    const user = await this.userRepository.findOne({
-      where: {
-        user_id,
-      },
-      relations: ['posts'],
-    });
-
-    if (!user) {
-      throw new NotFoundException('해당하는 아이디의 유저가 없습니다.');
-    }
-
-    return user;
-  }
-
-  async updateUserInfo(user_id: number, updateUserDto: UpdateUserDto) {
-    const user = await this.userRepository.findOne({
-      where: {
-        user_id,
-      },
-    });
-
-    if (!user) {
-      throw new NotFoundException('해당하는 아이디의 유저가 없습니다.');
-    }
-
-    await this.userRepository.update({ user_id }, { ...updateUserDto });
-
-    return user_id;
-  }
-
-  async removeUser(user_id: number) {
-    const user = await this.userRepository.findOne({
-      where: {
-        user_id,
-      },
-    });
-
-    if (!user) {
-      throw new NotFoundException('해당하는 아이디의 유저가 없습니다.');
-    }
-
-    await this.userRepository.delete({ user_id });
-
-    return user_id;
   }
 }
