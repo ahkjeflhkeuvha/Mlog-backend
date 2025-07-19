@@ -11,6 +11,7 @@ import { ConfigService } from '@nestjs/config';
 import { UserService } from 'src/user/user.service';
 import { Response } from 'express';
 import { JwtPayloadInterface } from './jwt-auth.guard';
+import { AuthService } from 'src/auth/auth.service';
 
 interface JwtPayload {
   sub: number;
@@ -29,7 +30,7 @@ export class PostService {
     private readonly jwtService: JwtService,
 
     private readonly configService: ConfigService,
-    private readonly userService: UserService,
+    private readonly authService: AuthService,
   ) {}
 
   async createPost(
@@ -64,7 +65,7 @@ export class PostService {
 
       return PostResponseDto.builder(post.id);
     } catch (err) {
-      const newAccessToken = await this.userService.refreshAccessToken(
+      const newAccessToken = await this.authService.refreshAccessToken(
         refreshToken,
         res,
       );

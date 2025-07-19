@@ -1,53 +1,25 @@
-import {
-  Injectable,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
-import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
 import { Response } from 'express';
-import { JwtPayloadInterface } from 'src/post/jwt-auth.guard';
+import { TokenService } from 'src/token/token.service';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    private readonly configService: ConfigService,
-    private readonly jwtService: JwtService,
+    private readonly tokenService: TokenService,
   ) {}
-
-  async issueToken(user: User, isRefresh: boolean): Promise<string> {
-    const refreshTokenSecret = this.configService.get<string>(
-      'REFRESH_TOKEN_SECRET',
-    );
-    const accessTokenSecret = this.configService.get<string>(
-      'ACCESS_TOKEN_SECRET',
-    );
-
-    return await this.jwtService.signAsync(
-      {
-        sub: user.user_id,
-        nickname: user.nickname,
-        type: isRefresh ? 'refresh' : 'access',
-      },
-      {
-        secret: isRefresh ? refreshTokenSecret : accessTokenSecret,
-        expiresIn: isRefresh ? '30d' : 300,
-      },
-    );
-  }
 
   async createUser(createUserDto: CreateUserDto, response: Response) {
     const user = this.userRepository.create(createUserDto);
 
-    const refreshToken = await this.issueToken(user, true);
-    const accessToken = await this.issueToken(user, false);
+    const refreshToken = await this.tokenService.issueToken(user, true);
+    const accessToken = await this.tokenService.issueToken(user, false);
 
     response.cookie('refreshToken', refreshToken);
     response.cookie('accessToken', accessToken);
@@ -60,96 +32,6 @@ export class UserService {
       refreshToken,
       accessToken,
     };
-  }
-
-  async login(email: string, response: Response) {
-    const user = await this.userRepository.findOne({
-      where: {
-        email: email,
-      },
-    });
-
-    if (!user) {
-      throw new Error('해당하는 이메일의 사용자가 없습니다.');
-    }
-
-    const refreshToken = await this.issueToken(user, true);
-    const accessToken = await this.issueToken(user, false);
-
-    // 로그인 시 로그인 토큰 갱신
-    await this.userRepository.update(
-      { email },
-      {
-        refresh_token: refreshToken,
-      },
-    );
-
-    response.cookie('refreshToken', refreshToken);
-    response.cookie('accessToken', accessToken);
-
-    const updatedUser = await this.userRepository.findOne({
-      where: {
-        email: email,
-      },
-    });
-
-    return updatedUser;
-  }
-
-  async logout(email: string, response: Response) {
-    const user = await this.userRepository.findOne({
-      where: {
-        email: email,
-      },
-    });
-
-    if (!user) {
-      throw new Error('해당하는 이메일의 사용자가 없습니다.');
-    }
-
-    await this.userRepository.update(
-      { email: email },
-      {
-        refresh_token: '',
-      },
-    );
-
-    response.clearCookie('refreshToken');
-    response.clearCookie('accessToken');
-  }
-
-  async refreshAccessToken(refreshToken: string, response: Response) {
-    try {
-      const payload: JwtPayloadInterface = await this.jwtService.verifyAsync(
-        refreshToken,
-        {
-          secret: this.configService.get('REFRESH_TOKEN_SECRET'),
-        },
-      );
-
-      const user = await this.userRepository.findOne({
-        where: { user_id: payload.sub },
-      });
-
-      if (!user || user.refresh_token !== refreshToken) {
-        throw new UnauthorizedException('유효하지 않은 refreshToken입니다.');
-      }
-
-      const newAccessToken = await this.issueToken(user, false);
-
-      // refreshToken도 주기적으로 갱신
-      await this.userRepository.save(user);
-
-      response.cookie('accessToken', newAccessToken);
-
-      console.log(newAccessToken);
-
-      return newAccessToken;
-    } catch (err) {
-      throw new UnauthorizedException(
-        'refreshToken이 만료되었거나 잘못되었습니다.',
-      );
-    }
   }
 
   async getUserInfoByUserId(user_id: number) {

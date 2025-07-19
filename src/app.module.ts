@@ -14,7 +14,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import * as Joi from 'joi';
 import { Post } from './post/entities/post.entity';
 import { User } from './user/entities/user.entity';
-import { JwtModule } from '@nestjs/jwt';
+import { AuthModule } from './auth/auth.module';
+import { TokenModule } from './token/token.module';
 
 @Module({
   imports: [
@@ -38,7 +39,7 @@ import { JwtModule } from '@nestjs/jwt';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_DATABASE'),
         entities: [Post, User],
-        synchronize: false, // 테스트일 경우 true 설정
+        synchronize: true, // 테스트일 경우 true 설정
       }),
       inject: [ConfigService],
     }),
@@ -50,6 +51,8 @@ import { JwtModule } from '@nestjs/jwt';
     PostModule,
     BoardModule,
     UserModule,
+    AuthModule,
+    TokenModule,
   ],
   controllers: [AppController],
   providers: [AppService],

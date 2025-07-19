@@ -7,10 +7,12 @@ import { Post } from 'src/post/entities/post.entity';
 import { JwtService } from '@nestjs/jwt';
 import { JwtAuthGuard } from 'src/post/jwt-auth.guard';
 import { ConfigService } from '@nestjs/config';
+import { TokenModule } from 'src/token/token.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Post])],
+  imports: [TypeOrmModule.forFeature([User, Post]), TokenModule],
   controllers: [UserController],
   providers: [UserService, JwtService, ConfigService, JwtAuthGuard],
+  exports: [UserService],
 })
 export class UserModule {}
