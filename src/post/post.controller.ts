@@ -51,8 +51,9 @@ export class PostController {
     );
   }
 
-  @Get(':post_id')
-  async findPostById(@Param('post_id') post_id: string) {
+  @Get(':id/test')
+  async findPostById(@Param('id') post_id: string) {
+    console.log('test', post_id);
     return await this.postService.findPostById(+post_id);
   }
 

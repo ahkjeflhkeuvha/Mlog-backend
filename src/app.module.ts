@@ -16,6 +16,7 @@ import { Post } from './post/entities/post.entity';
 import { User } from './user/entities/user.entity';
 import { AuthModule } from './auth/auth.module';
 import { TokenModule } from './token/token.module';
+import { Comment } from './comment/entities/comment.entity';
 
 @Module({
   imports: [
@@ -40,6 +41,8 @@ import { TokenModule } from './token/token.module';
         database: configService.get<string>('DB_DATABASE'),
         entities: [Post, User],
         synchronize: true, // 테스트일 경우 true 설정
+        entities: [Post, User, Comment],
+        synchronize: false, // 테스트일 경우 true 설정
       }),
       inject: [ConfigService],
     }),
