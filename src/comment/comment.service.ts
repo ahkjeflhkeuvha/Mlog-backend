@@ -10,13 +10,15 @@ import { JwtService } from '@nestjs/jwt';
 import { JwtPayloadInterface } from 'src/post/jwt-auth.guard';
 import { ConfigService } from '@nestjs/config';
 import { UserService } from 'src/user/user.service';
+import { Post } from 'src/post/entities/post.entity';
 
 @Injectable()
 export class CommentService {
   constructor(
     @InjectRepository(Comment)
     private readonly commentRepository: Repository<Comment>,
-
+    @InjectRepository(Post)
+    private readonly postRepository: Repository<Post>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly userService: UserService,
@@ -54,13 +56,13 @@ export class CommentService {
         ...createCommentDto,
         user_id: user.user_id,
       });
+
       await this.commentRepository.save(comment);
 
       // console.log('tt');
 
       return comment;
     } catch (err) {
-      console.error('JWT 검증 실패:', err);
       const newAccessToken = await this.userService.refreshAccessToken(
         refreshToken,
         res,
@@ -75,8 +77,24 @@ export class CommentService {
     }
   }
 
-  findAll() {
-    return `This action returns all comment`;
+  async findAllCommentsByPostId(post_id: number) {
+    const post = await this.postRepository.findOne({
+      where: {
+        id: post_id,
+      },
+    });
+
+    if (!post) {
+      throw new NotFoundException('포스트를 찾을 수 없습니다.');
+    }
+
+    const comments = await this.commentRepository.find({
+      where: {
+        post,
+      },
+    });
+
+    return comments;
   }
 
   findOne(id: number) {

@@ -35,14 +35,9 @@ export class CommentController {
     );
   }
 
-  @Get()
-  findAll() {
-    return this.commentService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.commentService.findOne(+id);
+  @Get(':post_id')
+  findAllCommentsByPostId(@Param('post_id') post_id: number) {
+    return this.commentService.findAllCommentsByPostId(post_id);
   }
 
   @Patch(':id')
