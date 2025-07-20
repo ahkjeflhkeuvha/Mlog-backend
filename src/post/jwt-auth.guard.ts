@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 
 export interface JwtPayloadInterface {
@@ -13,7 +13,7 @@ export class JwtAuthGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
-    const access_token = request.cookies?.['access_token'];
+    const access_token = request.cookies?.['accessToken'];
     if (!access_token) return false;
 
     try {
@@ -21,7 +21,7 @@ export class JwtAuthGuard implements CanActivate {
       request.user = user;
       return true;
     } catch {
-      return false;
+      throw new UnauthorizedException('인증되지 않은 사용자입니다.');
     }
   }
 }
