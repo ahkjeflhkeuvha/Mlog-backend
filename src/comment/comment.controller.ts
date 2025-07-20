@@ -8,6 +8,7 @@ import {
   Delete,
   Req,
   Res,
+  Query,
 } from '@nestjs/common';
 import { CommentService } from './comment.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
@@ -36,8 +37,14 @@ export class CommentController {
   }
 
   @Get(':post_id')
-  findAllCommentsByPostId(@Param('post_id') post_id: number) {
-    return this.commentService.findAllCommentsByPostId(post_id);
+  findAllCommentsByPostId(
+    @Param('post_id') post_id: number,
+    @Query('type') type: string,
+  ) {
+    return this.commentService.findAllCommentsByPostIdOrCommentId(
+      post_id,
+      type,
+    );
   }
 
   @Patch(':id')

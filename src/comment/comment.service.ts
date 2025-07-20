@@ -77,28 +77,45 @@ export class CommentService {
     }
   }
 
-  async findAllCommentsByPostId(post_id: number) {
-    const post = await this.postRepository.findOne({
-      where: {
-        id: post_id,
-      },
-    });
+  async findAllCommentsByPostIdOrCommentId(id: number, type: string) {
+    // post id 기준 모든 댓글 가져오기
+    if (type === 'post') {
+      const post = await this.postRepository.findOne({
+        where: {
+          id,
+        },
+      });
 
-    if (!post) {
-      throw new NotFoundException('포스트를 찾을 수 없습니다.');
+      if (!post) {
+        throw new NotFoundException('포스트를 찾을 수 없습니다.');
+      }
+
+      const comments = await this.commentRepository.find({
+        where: {
+          post,
+        },
+      });
+
+      return comments;
+    } else if (type === 'comment') {
+      const comment = await this.commentRepository.findOne({
+        where: {
+          id,
+        },
+      });
+
+      if (!comment) {
+        throw new NotFoundException('댓글을 찾을 수 없습니다.');
+      }
+
+      const childComments = await this.commentRepository.find({
+        where: {
+          parent: comment,
+        },
+      });
+
+      return childComments;
     }
-
-    const comments = await this.commentRepository.find({
-      where: {
-        post,
-      },
-    });
-
-    return comments;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} comment`;
   }
 
   update(id: number, updateCommentDto: UpdateCommentDto) {
