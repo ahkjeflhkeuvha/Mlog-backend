@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -6,6 +10,9 @@ import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import { Response } from 'express';
 import { TokenService } from 'src/token/token.service';
+import { JwtPayloadInterface } from 'src/post/jwt-auth.guard';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class UserService {
@@ -13,6 +20,8 @@ export class UserService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly tokenService: TokenService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {}
 
   async createUser(createUserDto: CreateUserDto, response: Response) {
@@ -45,8 +54,8 @@ export class UserService {
       throw new Error('해당하는 이메일의 사용자가 없습니다.');
     }
 
-    const refreshToken = await this.issueToken(user, true);
-    const accessToken = await this.issueToken(user, false);
+    const refreshToken = await this.tokenService.issueToken(user, true);
+    const accessToken = await this.tokenService.issueToken(user, false);
 
     // 로그인 시 로그인 토큰 갱신
     await this.userRepository.update(
@@ -107,7 +116,7 @@ export class UserService {
         throw new UnauthorizedException('유효하지 않은 refreshToken입니다.');
       }
 
-      const newAccessToken = await this.issueToken(user, false);
+      const newAccessToken = await this.tokenService.issueToken(user, false);
 
       // refreshToken도 주기적으로 갱신
       await this.userRepository.save(user);

@@ -7,10 +7,14 @@ import {
   Param,
   Delete,
   Res,
+  Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { LoginUserDto } from './dto/login-user.dto';
+import { LogoutUserDto } from './dto/logout-user.dto';
 import { Request, Response } from 'express';
 
 @Controller('users')
