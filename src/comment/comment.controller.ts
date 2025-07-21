@@ -22,17 +22,15 @@ export class CommentController {
   @Post()
   async createComment(
     @Body() createCommentDto: CreateCommentDto,
+    @Query('type') type: string,
     @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
   ) {
     const accessToken = req.cookies.accessToken;
-    const refreshToken = req.cookies.refreshToken;
 
     return await this.commentService.createComment(
       createCommentDto,
+      type,
       accessToken,
-      refreshToken,
-      res,
     );
   }
 

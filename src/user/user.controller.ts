@@ -47,7 +47,7 @@ export class UserController {
   }
 
   @Post('refresh')
-  refreshAccessToken(@Req() req: Request, @Res() res: Response) {
+  refreshAccessToken(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const refreshToken = req.cookies.refreshToken;
 
     if (!refreshToken) {

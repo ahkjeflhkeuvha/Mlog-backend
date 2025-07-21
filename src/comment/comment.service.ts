@@ -28,11 +28,9 @@ export class CommentService {
 
   async createComment(
     createCommentDto: CreateCommentDto,
+    type: string,
     accessToken: string,
-    refreshToken: string,
-    res: Response,
   ) {
-    try {
       const payload: JwtPayloadInterface = await this.jwtService.verifyAsync(
         accessToken,
         {
@@ -52,8 +50,25 @@ export class CommentService {
         );
       }
 
+      let parent;
+
+      if (type === 'child') {
+        parent = await this.commentRepository.findOne({
+          where: {
+            id: createCommentDto.parent_id,
+          },
+        });
+
+        console.log("test : ", parent);
+
+        if (!parent) {
+          throw new NotFoundException('해당하는 댓글을 찾을 수 없습니다.');
+        }
+      }
+
       const comment = this.commentRepository.create({
         ...createCommentDto,
+        parent: type === 'child' ? parent : null,
         user_id: user.user_id,
       });
 
@@ -62,19 +77,7 @@ export class CommentService {
       // console.log('tt');
 
       return comment;
-    } catch (err) {
-      const newAccessToken = await this.userService.refreshAccessToken(
-        refreshToken,
-        res,
-      );
 
-      return await this.createComment(
-        createCommentDto,
-        newAccessToken,
-        refreshToken,
-        res,
-      );
-    }
   }
 
   async findAllCommentsByPostIdOrCommentId(id: number, type: string) {
@@ -112,6 +115,7 @@ export class CommentService {
         where: {
           parent: comment,
         },
+        relations: ['parent'],
       });
 
       return childComments;
