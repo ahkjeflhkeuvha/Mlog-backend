@@ -39,8 +39,6 @@ import { Comment } from './comment/entities/comment.entity';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_DATABASE'),
-        entities: [Post, User],
-        synchronize: true, // 테스트일 경우 true 설정
         entities: [Post, User, Comment],
         synchronize: false, // 테스트일 경우 true 설정
       }),

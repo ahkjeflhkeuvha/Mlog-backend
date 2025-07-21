@@ -8,6 +8,7 @@ import {
   Delete,
   Req,
   Res,
+  Query,
 } from '@nestjs/common';
 import { CommentService } from './comment.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
@@ -21,28 +22,27 @@ export class CommentController {
   @Post()
   async createComment(
     @Body() createCommentDto: CreateCommentDto,
+    @Query('type') type: string,
     @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
   ) {
     const accessToken = req.cookies.accessToken;
-    const refreshToken = req.cookies.refreshToken;
 
     return await this.commentService.createComment(
       createCommentDto,
+      type,
       accessToken,
-      refreshToken,
-      res,
     );
   }
 
-  @Get()
-  findAll() {
-    return this.commentService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.commentService.findOne(+id);
+  @Get(':post_id')
+  findAllCommentsByPostId(
+    @Param('post_id') post_id: number,
+    @Query('type') type: string,
+  ) {
+    return this.commentService.findAllCommentsByPostIdOrCommentId(
+      post_id,
+      type,
+    );
   }
 
   @Patch(':id')

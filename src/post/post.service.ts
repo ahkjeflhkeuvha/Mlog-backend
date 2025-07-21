@@ -8,10 +8,10 @@ import { PostResponseDto } from './dto/post-response.dto';
 import { User } from 'src/user/entities/user.entity';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { UserService } from 'src/user/user.service';
 import { Response } from 'express';
 import { JwtPayloadInterface } from './jwt-auth.guard';
 import { AuthService } from 'src/auth/auth.service';
+import { UserService } from 'src/user/user.service';
 
 interface JwtPayload {
   sub: number;
@@ -31,6 +31,7 @@ export class PostService {
 
     private readonly configService: ConfigService,
     private readonly authService: AuthService,
+    private readonly userService: UserService,
   ) {}
 
   async createPost(
