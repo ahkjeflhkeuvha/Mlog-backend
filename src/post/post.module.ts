@@ -6,7 +6,10 @@ import { Post } from './entities/post.entity';
 import { User } from 'src/user/entities/user.entity';
 import { ConfigService, ConfigModule } from '@nestjs/config';
 import { JwtService, JwtModule } from '@nestjs/jwt';
+import { AuthModule } from 'src/auth/auth.module';
+import { AuthService } from 'src/auth/auth.service';
 import { UserService } from 'src/user/user.service';
+import { TokenService } from 'src/token/token.service';
 
 @Module({
   imports: [
@@ -21,8 +24,16 @@ import { UserService } from 'src/user/user.service';
         },
       }),
     }),
+    AuthModule,
   ],
   controllers: [PostController],
-  providers: [PostService, UserService, ConfigService, JwtService],
+  providers: [
+    PostService,
+    ConfigService,
+    JwtService,
+    AuthService,
+    UserService,
+    TokenService,
+  ],
 })
 export class PostModule {}

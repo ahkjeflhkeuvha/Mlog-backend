@@ -8,9 +8,10 @@ import { PostResponseDto } from './dto/post-response.dto';
 import { User } from 'src/user/entities/user.entity';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { UserService } from 'src/user/user.service';
 import { Response } from 'express';
 import { JwtPayloadInterface } from './jwt-auth.guard';
+import { AuthService } from 'src/auth/auth.service';
+import { UserService } from 'src/user/user.service';
 
 interface JwtPayload {
   sub: number;
@@ -29,6 +30,7 @@ export class PostService {
     private readonly jwtService: JwtService,
 
     private readonly configService: ConfigService,
+    private readonly authService: AuthService,
     private readonly userService: UserService,
   ) {}
 
@@ -63,7 +65,7 @@ export class PostService {
 
       return PostResponseDto.builder(post.id);
     } catch (err) {
-      const newAccessToken = await this.userService.refreshAccessToken(
+      const newAccessToken = await this.authService.refreshAccessToken(
         refreshToken,
         res,
       );
@@ -119,7 +121,7 @@ export class PostService {
         refreshToken,
         res,
       );
-      console.log('test ; ', newAccessToken);
+
       return await this.findPostsByTypeAndUser(
         type,
         newAccessToken,
@@ -130,11 +132,14 @@ export class PostService {
   }
 
   async findPostById(post_id: number) {
+    console.log('ㅅㅅ');
     const post = await this.postRepository.findOne({
       where: {
         id: post_id,
       },
+      relations: ['comments'],
     });
+
     return post;
   }
 
