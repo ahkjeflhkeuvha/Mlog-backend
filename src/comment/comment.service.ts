@@ -31,24 +31,23 @@ export class CommentService {
     type: string,
     accessToken: string,
   ) {
-      const payload: JwtPayloadInterface = await this.jwtService.verifyAsync(
-        accessToken,
-        {
-          secret: this.configService.get<string>('ACCESS_TOKEN_SECRET'),
-        },
+    const payload: JwtPayloadInterface = await this.jwtService.verifyAsync(
+      accessToken,
+      {
+        secret: this.configService.get<string>('ACCESS_TOKEN_SECRET'),
+      },
+    );
+
+    const user = await this.userRepository.findOne({
+      where: { user_id: payload.sub },
+    });
+
+    // console.log(user);
+    if (!user) {
+      throw new NotFoundException(
+        '해당 아이디에 일치하는 사용자가 없습니다.',
       );
-
-      const user = await this.userRepository.findOne({
-        where: { user_id: payload.sub },
-      });
-
-      // console.log(user);
-
-      if (!user) {
-        throw new NotFoundException(
-          '해당 아이디에 일치하는 사용자가 없습니다.',
-        );
-      }
+    }
 
       let parent;
 
@@ -73,10 +72,9 @@ export class CommentService {
       });
 
       await this.commentRepository.save(comment);
-
       // console.log('tt');
 
-      return comment;
+    return comment;
 
   }
 
