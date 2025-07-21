@@ -1,34 +1,77 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { Response, Request } from 'express';
 
-@Controller('post')
+@Controller('posts')
 export class PostController {
   constructor(private readonly postService: PostService) {}
 
   @Post()
-  create(@Body() createPostDto: CreatePostDto) {
-    return this.postService.create(createPostDto);
+  async createPost(
+    @Body() createPostDto: CreatePostDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return await this.postService.createPost(
+      createPostDto,
+      req.cookies.accessToken,
+      req.cookies.refreshToken,
+      res,
+    );
   }
 
   @Get()
-  findAll() {
-    return this.postService.findAll();
+  async findAllPosts() {
+    return await this.postService.findAllPosts();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.postService.findOne(+id);
+  @Get(':type') // :user_id 추가
+  async findSavedPostsByUserId(
+    @Param('type') type: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return await this.postService.findPostsByTypeAndUser(
+      type,
+      req.cookies.accessToken,
+      req.cookies.refreshToken,
+      res,
+    );
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePostDto: UpdatePostDto) {
-    return this.postService.update(+id, updatePostDto);
+  @Get(':id/test')
+  async findPostById(@Param('id') post_id: string) {
+    console.log('test', post_id);
+    return await this.postService.findPostById(+post_id);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.postService.remove(+id);
+  @Get(':user_id/posts')
+  async getAllPostsByUserId(@Param('user_id') user_id: number) {
+    return await this.postService.getAllPostsByUserId(+user_id);
+  }
+
+  @Patch(':post_id')
+  async updatePostById(
+    @Param('post_id') id: string,
+    @Body() updatePostDto: UpdatePostDto,
+  ) {
+    return await this.postService.updatePostById(+id, updatePostDto);
+  }
+
+  @Delete(':post_id')
+  async deletePostById(@Param('post_id') id: string) {
+    return await this.postService.deletePostById(+id);
   }
 }
