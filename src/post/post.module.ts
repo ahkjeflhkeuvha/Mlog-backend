@@ -27,13 +27,6 @@ import { TokenService } from 'src/token/token.service';
     AuthModule,
   ],
   controllers: [PostController],
-  providers: [
-    PostService,
-    ConfigService,
-    JwtService,
-    AuthService,
-    UserService,
-    TokenService,
-  ],
+  providers: [PostService, ConfigService, JwtService, AuthService, UserService, TokenService],
 })
 export class PostModule {}

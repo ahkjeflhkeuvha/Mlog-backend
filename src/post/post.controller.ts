@@ -8,6 +8,7 @@ import {
   Delete,
   Req,
   Res,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
@@ -52,26 +53,26 @@ export class PostController {
   }
 
   @Get(':id/test')
-  async findPostById(@Param('id') post_id: string) {
+  async findPostById(@Param('id', ParseIntPipe) post_id: string) {
     console.log('test', post_id);
     return await this.postService.findPostById(+post_id);
   }
 
   @Get(':user_id/posts')
-  async getAllPostsByUserId(@Param('user_id') user_id: number) {
+  async getAllPostsByUserId(@Param('user_id', ParseIntPipe) user_id: number) {
     return await this.postService.getAllPostsByUserId(+user_id);
   }
 
   @Patch(':post_id')
   async updatePostById(
-    @Param('post_id') id: string,
+    @Param('post_id', ParseIntPipe) id: string,
     @Body() updatePostDto: UpdatePostDto,
   ) {
     return await this.postService.updatePostById(+id, updatePostDto);
   }
 
   @Delete(':post_id')
-  async deletePostById(@Param('post_id') id: string) {
+  async deletePostById(@Param('post_id', ParseIntPipe) id: string) {
     return await this.postService.deletePostById(+id);
   }
 }
