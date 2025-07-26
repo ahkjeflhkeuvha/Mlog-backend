@@ -25,6 +25,9 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+## We are working like this...
+https://alkaline-hardware-bca.notion.site/M-log-22f86c562aeb80fa84b9fe0dbd8e990c?pvs=74
+
 ## Project setup
 
 ```bash

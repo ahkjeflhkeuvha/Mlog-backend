@@ -6,7 +6,18 @@ import { Repository } from 'typeorm';
 import { Post } from './entities/post.entity';
 import { PostResponseDto } from './dto/post-response.dto';
 import { User } from 'src/user/entities/user.entity';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { Response } from 'express';
+import { JwtPayloadInterface } from './jwt-auth.guard';
+import { AuthService } from 'src/auth/auth.service';
+import { UserService } from 'src/user/user.service';
 
+interface JwtPayload {
+  sub: number;
+  email: string;
+  type: string;
+}
 @Injectable()
 export class PostService {
   constructor(
@@ -15,13 +26,57 @@ export class PostService {
 
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+
+    private readonly jwtService: JwtService,
+
+    private readonly configService: ConfigService,
+    private readonly authService: AuthService,
+    private readonly userService: UserService,
   ) {}
 
-  async createPost(createPostDto: CreatePostDto) {
-    const newPost = this.postRepository.create(createPostDto);
-    const post = await this.postRepository.save(newPost);
+  async createPost(
+    createPostDto: CreatePostDto,
+    accessToken: string,
+    refreshToken: string,
+    res: Response,
+  ) {
+    try {
+      const payload: JwtPayloadInterface = await this.jwtService.verifyAsync(
+        accessToken,
+        {
+          secret: this.configService.get<string>('ACCESS_TOKEN_SECRET'),
+        },
+      );
 
-    return PostResponseDto.builder(post.id);
+      const user = await this.userRepository.findOne({
+        where: { user_id: payload.sub },
+      });
+
+      if (!user) {
+        throw new NotFoundException('사용 가능한 토큰이 아닙니다.');
+      }
+
+      const newPost = this.postRepository.create({
+        ...createPostDto,
+        user,
+      });
+
+      const post = await this.postRepository.save(newPost);
+
+      return PostResponseDto.builder(post.id);
+    } catch (err) {
+      const newAccessToken = await this.authService.refreshAccessToken(
+        refreshToken,
+        res,
+      );
+
+      return await this.createPost(
+        createPostDto,
+        newAccessToken,
+        refreshToken,
+        res,
+      );
+    }
   }
 
   async findAllPosts() {
@@ -29,22 +84,62 @@ export class PostService {
     return posts;
   }
 
-  async findSavedPostsByUserId() {
-    const posts = await this.postRepository.find({
-      where: {
-        is_uploaded: false,
-      },
-    });
+  async findPostsByTypeAndUser(
+    type: string,
+    accessToken: string,
+    refreshToken: string,
+    res: Response,
+  ) {
+    try {
+      const payload: JwtPayloadInterface = await this.jwtService.verifyAsync(
+        accessToken,
+        {
+          secret: this.configService.get<string>('ACCESS_TOKEN_SECRET'),
+        },
+      );
 
-    return posts;
+      const user = await this.userRepository.findOne({
+        where: { user_id: payload.sub },
+      });
+
+      if (!user) {
+        throw new NotFoundException(
+          '해당 아이디에 일치하는 사용자가 없습니다.',
+        );
+      }
+
+      const posts = await this.postRepository.find({
+        where: {
+          is_uploaded: type === 'uploaded' ? true : false,
+          user,
+        },
+      });
+
+      return posts;
+    } catch (err) {
+      const newAccessToken = await this.userService.refreshAccessToken(
+        refreshToken,
+        res,
+      );
+
+      return await this.findPostsByTypeAndUser(
+        type,
+        newAccessToken,
+        refreshToken,
+        res,
+      );
+    }
   }
 
   async findPostById(post_id: number) {
+    console.log('ㅅㅅ');
     const post = await this.postRepository.findOne({
       where: {
         id: post_id,
       },
+      relations: ['comments'],
     });
+
     return post;
   }
 
