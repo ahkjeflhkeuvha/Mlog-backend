@@ -25,12 +25,7 @@ export class PostController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return await this.postService.createPost(
-      createPostDto,
-      req.cookies.accessToken,
-      req.cookies.refreshToken,
-      res,
-    );
+    return await this.postService.createPost(createPostDto, req.cookies.accessToken);
   }
 
   @Get()
@@ -39,17 +34,8 @@ export class PostController {
   }
 
   @Get(':type') // :user_id 추가
-  async findSavedPostsByUserId(
-    @Param('type') type: string,
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    return await this.postService.findPostsByTypeAndUser(
-      type,
-      req.cookies.accessToken,
-      req.cookies.refreshToken,
-      res,
-    );
+  async findSavedPostsByUserId(@Param('type') type: string, @Req() req: Request) {
+    return await this.postService.findPostsByTypeAndUser(type, req.cookies.accessToken);
   }
 
   @Get(':id/test')
