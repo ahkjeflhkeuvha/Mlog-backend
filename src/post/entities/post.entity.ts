@@ -7,7 +7,9 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
   OneToMany,
+  OneToOne,
 } from 'typeorm';
+import { Content } from '../../content/entities/content.entity';
 
 @Entity()
 export class Post {
@@ -29,12 +31,15 @@ export class Post {
   @CreateDateColumn()
   created_at: Date;
 
+  @OneToOne(() => Content, content => content.post, { eager: true })
+  content: Content;
+
   // board_id : ManyToOne
 
   // user_id : ManyToOne
-  @ManyToOne(() => User, (user) => user.posts, { eager: true })
+  @ManyToOne(() => User, user => user.posts, { eager: true })
   user: User;
 
-  @OneToMany(() => Comment, (comment) => comment.post, { eager: true })
+  @OneToMany(() => Comment, comment => comment.post, { eager: true })
   comments: Comment[];
 }

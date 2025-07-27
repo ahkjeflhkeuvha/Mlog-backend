@@ -9,6 +9,7 @@ import {
   Res,
   Req,
   UnauthorizedException,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -22,27 +23,18 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post()
-  createUser(
-    @Body() createUserDto: CreateUserDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  createUser(@Body() createUserDto: CreateUserDto, @Res({ passthrough: true }) res: Response) {
     return this.userService.createUser(createUserDto, res);
   }
 
   @Post('login')
-  login(
-    @Body() loginUserDto: LoginUserDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  login(@Body() loginUserDto: LoginUserDto, @Res({ passthrough: true }) res: Response) {
     // console.log('email : ', email);
     return this.userService.login(loginUserDto.email, res);
   }
 
   @Post('logout')
-  logout(
-    @Body() logoutUserDto: LogoutUserDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  logout(@Body() logoutUserDto: LogoutUserDto, @Res({ passthrough: true }) res: Response) {
     return this.userService.logout(logoutUserDto.email, res);
   }
 
@@ -58,20 +50,17 @@ export class UserController {
   }
 
   @Get(':user_id')
-  getUserInfoByUserId(@Param('user_id') id: string) {
+  getUserInfoByUserId(@Param('user_id', ParseIntPipe) id: number) {
     return this.userService.getUserInfoByUserId(+id);
   }
 
   @Patch(':user_id')
-  updateUserInfo(
-    @Param('user_id') id: string,
-    @Body() updateUserDto: UpdateUserDto,
-  ) {
+  updateUserInfo(@Param('user_id', ParseIntPipe) id: number, @Body() updateUserDto: UpdateUserDto) {
     return this.userService.updateUserInfo(+id, updateUserDto);
   }
 
   @Delete(':user_id')
-  removeUser(@Param('user_id') id: string) {
+  removeUser(@Param('user_id', ParseIntPipe) id: number) {
     return this.userService.removeUser(+id);
   }
 }

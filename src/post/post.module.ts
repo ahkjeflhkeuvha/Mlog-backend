@@ -10,10 +10,12 @@ import { AuthModule } from 'src/auth/auth.module';
 import { AuthService } from 'src/auth/auth.service';
 import { UserService } from 'src/user/user.service';
 import { TokenService } from 'src/token/token.service';
+import { Content } from '../content/entities/content.entity';
+import { ContentService } from '../content/content.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Post, User]),
+    TypeOrmModule.forFeature([Post, User, Content]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -34,6 +36,7 @@ import { TokenService } from 'src/token/token.service';
     AuthService,
     UserService,
     TokenService,
+    ContentService,
   ],
 })
 export class PostModule {}

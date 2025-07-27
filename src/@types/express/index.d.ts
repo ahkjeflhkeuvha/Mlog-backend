@@ -1,8 +1,8 @@
 // src/@types/express/index.d.ts
-import { JwtPayload } from 'jsonwebtoken';
+import { QueryRunner } from 'typeorm';
 
-declare namespace Express {
+declare module 'express' {
   export interface Request {
-    user?: JwtPayload;
+    qr: QueryRunner;
   }
 }

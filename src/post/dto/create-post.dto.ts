@@ -14,6 +14,9 @@ export class CreatePostDto {
   @IsBoolean()
   is_deleted: boolean;
 
+  @IsString()
+  content: string;
+
   // board_id
 
   // user_id

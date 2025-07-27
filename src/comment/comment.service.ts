@@ -1,9 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Comment } from './entities/comment.entity';
-import { Repository } from 'typeorm';
+import { QueryRunner, Repository } from 'typeorm';
 import { Response } from 'express';
 import { User } from 'src/user/entities/user.entity';
 import { JwtService } from '@nestjs/jwt';
@@ -30,58 +30,50 @@ export class CommentService {
     createCommentDto: CreateCommentDto,
     type: string,
     accessToken: string,
+    qr: QueryRunner,
   ) {
-    const payload: JwtPayloadInterface = await this.jwtService.verifyAsync(
-      accessToken,
-      {
-        secret: this.configService.get<string>('ACCESS_TOKEN_SECRET'),
-      },
-    );
+    const payload: JwtPayloadInterface = await this.jwtService.verifyAsync(accessToken, {
+      secret: this.configService.get<string>('ACCESS_TOKEN_SECRET'),
+    });
 
-    const user = await this.userRepository.findOne({
+    const user = await qr.manager.findOne(User, {
       where: { user_id: payload.sub },
     });
 
     // console.log(user);
     if (!user) {
-      throw new NotFoundException(
-        '해당 아이디에 일치하는 사용자가 없습니다.',
-      );
+      throw new NotFoundException('해당 아이디에 일치하는 사용자가 없습니다.');
     }
 
-      let parent;
+    let parent;
 
-      if (type === 'child') {
-        parent = await this.commentRepository.findOne({
-          where: {
-            id: createCommentDto.parent_id,
-          },
-        });
-
-        console.log("test : ", parent);
-
-        if (!parent) {
-          throw new NotFoundException('해당하는 댓글을 찾을 수 없습니다.');
-        }
-      }
-
-      const comment = this.commentRepository.create({
-        ...createCommentDto,
-        parent: type === 'child' ? parent : null,
-        user_id: user.user_id,
+    if (type === 'child') {
+      parent = await qr.manager.findOne(Comment, {
+        where: {
+          id: createCommentDto.parent_id,
+        },
       });
 
-      await this.commentRepository.save(comment);
-      // console.log('tt');
+      if (!parent) {
+        throw new NotFoundException('해당하는 댓글을 찾을 수 없습니다.');
+      }
+    }
+
+    const comment = qr.manager.create(Comment, {
+      ...createCommentDto,
+      parent: type === 'child' ? parent : null,
+      user_id: user.user_id,
+    });
+
+    await qr.manager.save(Comment, comment);
 
     return comment;
-
   }
 
-  async findAllCommentsByPostIdOrCommentId(id: number, type: string) {
+  async findAllCommentsByPostIdOrCommentId(id: number, type: string, qr: QueryRunner) {
     // post id 기준 모든 댓글 가져오기
     if (type === 'post') {
-      const post = await this.postRepository.findOne({
+      const post = await qr.manager.findOne(Post, {
         where: {
           id,
         },
@@ -91,15 +83,15 @@ export class CommentService {
         throw new NotFoundException('포스트를 찾을 수 없습니다.');
       }
 
-      const comments = await this.commentRepository.find({
+      const comments = await qr.manager.find(Comment, {
         where: {
-          post,
+          post: { id: post.id },
         },
       });
 
       return comments;
     } else if (type === 'comment') {
-      const comment = await this.commentRepository.findOne({
+      const comment = await qr.manager.findOne(Comment, {
         where: {
           id,
         },
@@ -109,7 +101,7 @@ export class CommentService {
         throw new NotFoundException('댓글을 찾을 수 없습니다.');
       }
 
-      const childComments = await this.commentRepository.find({
+      const childComments = await qr.manager.find(Comment, {
         where: {
           parent: comment,
         },
@@ -120,11 +112,63 @@ export class CommentService {
     }
   }
 
-  update(id: number, updateCommentDto: UpdateCommentDto) {
-    return `This action updates a #${id} comment`;
+  async update(
+    id: number,
+    updateCommentDto: UpdateCommentDto,
+    accessToken: string,
+    qr: QueryRunner,
+  ) {
+    const payload: JwtPayloadInterface = await this.jwtService.verifyAsync(accessToken, {
+      secret: this.configService.get<string>('ACCESS_TOKEN_SECRET'),
+    });
+
+    const user = await qr.manager.findOne(User, {
+      where: { user_id: payload.sub },
+    });
+
+    const comment = await qr.manager.findOne(Comment, {
+      where: {
+        id: id,
+      },
+    });
+
+    console.log(comment);
+
+    if (comment.user_id !== user.user_id) {
+      throw new UnauthorizedException('댓글 작성자가 아닙니다.');
+    }
+
+    await qr.manager.update(
+      Comment,
+      { id: comment.id },
+      {
+        ...updateCommentDto,
+      },
+    );
+
+    return comment.id;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} comment`;
+  async remove(id: number, accessToken: string, qr: QueryRunner) {
+    const payload: JwtPayloadInterface = await this.jwtService.verifyAsync(accessToken, {
+      secret: this.configService.get<string>('ACCESS_TOKEN_SECRET'),
+    });
+
+    const user = await qr.manager.findOne(User, {
+      where: { user_id: payload.sub },
+    });
+
+    const comment = await qr.manager.findOne(Comment, {
+      where: {
+        id: id,
+      },
+    });
+
+    if (comment.user_id !== user.user_id) {
+      throw new UnauthorizedException('댓글 작성자가 아닙니다.');
+    }
+
+    await qr.manager.delete(Comment, { id: comment.id });
+    return comment.id;
   }
 }
