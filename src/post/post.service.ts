@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/co
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { QueryRunner, Repository } from 'typeorm';
 import { Post } from './entities/post.entity';
 import { PostResponseDto } from './dto/post-response.dto';
 import { User } from 'src/user/entities/user.entity';
@@ -35,86 +35,82 @@ export class PostService {
     private readonly contentService: ContentService,
   ) {}
 
-  async createPost(createPostDto: CreatePostDto, accessToken: string) {
-    try {
-      const payload: JwtPayloadInterface = await this.jwtService.verifyAsync(accessToken, {
-        secret: this.configService.get<string>('ACCESS_TOKEN_SECRET'),
-      });
+  async createPost(createPostDto: CreatePostDto, accessToken: string, qr: QueryRunner) {
+    const payload: JwtPayloadInterface = await this.jwtService.verifyAsync(accessToken, {
+      secret: this.configService.get<string>('ACCESS_TOKEN_SECRET'),
+    });
 
-      const user = await this.userRepository.findOne({
-        where: { user_id: payload.sub },
-      });
+    const user = await qr.manager.findOne(User, {
+      where: { user_id: payload.sub },
+    });
 
-      if (!user) {
-        throw new NotFoundException('사용 가능한 토큰이 아닙니다.');
-      }
-
-      const newPost = this.postRepository.create({
-        title: createPostDto.title,
-        thumbnail_url: createPostDto.thumbnail_url,
-        is_uploaded: createPostDto.is_uploaded,
-        is_deleted: createPostDto.is_deleted,
-        user,
-      });
-
-      const post = await this.postRepository.save(newPost);
-
-      await this.contentService.create({ content: createPostDto.content, post_id: post.id });
-
-      return PostResponseDto.builder(post.id);
-    } catch (err) {
-      console.log(err);
-      throw new UnauthorizedException('토큰이 만료되었습니다.');
+    if (!user) {
+      throw new NotFoundException('사용 가능한 토큰이 아닙니다.');
     }
+
+    const newPost = qr.manager.create(Post, {
+      title: createPostDto.title,
+      thumbnail_url: createPostDto.thumbnail_url,
+      is_uploaded: createPostDto.is_uploaded,
+      is_deleted: createPostDto.is_deleted,
+      user,
+    });
+
+    const post = await qr.manager.save(Post, newPost);
+
+    qr.manager.create(Content, {
+      content: createPostDto.content,
+      post_id: post.id,
+    });
+
+    return PostResponseDto.builder(post.id);
   }
 
-  async findAllPosts() {
-    const posts = await this.postRepository.find();
+  async findAllPosts(qr: QueryRunner) {
+    return await qr.manager.find(Post, {});
+  }
+
+  async findPostsByTypeAndUser(type: string, accessToken: string, qr: QueryRunner) {
+    const payload: JwtPayloadInterface = await this.jwtService.verifyAsync(accessToken, {
+      secret: this.configService.get<string>('ACCESS_TOKEN_SECRET'),
+    });
+
+    const user = await qr.manager.findOne(User, {
+      where: { user_id: payload.sub },
+    });
+
+    if (!user) {
+      throw new NotFoundException('해당 아이디에 일치하는 사용자가 없습니다.');
+    }
+
+    const posts = await qr.manager.find(Post, {
+      where: {
+        is_uploaded: type === 'uploaded',
+        user,
+      },
+      relations: ['content', 'comments'],
+    });
+
     return posts;
   }
 
-  async findPostsByTypeAndUser(type: string, accessToken: string) {
-    try {
-      const payload: JwtPayloadInterface = await this.jwtService.verifyAsync(accessToken, {
-        secret: this.configService.get<string>('ACCESS_TOKEN_SECRET'),
-      });
-
-      const user = await this.userRepository.findOne({
-        where: { user_id: payload.sub },
-      });
-
-      if (!user) {
-        throw new NotFoundException('해당 아이디에 일치하는 사용자가 없습니다.');
-      }
-
-      const posts = await this.postRepository.find({
-        where: {
-          is_uploaded: type === 'uploaded',
-          user,
-        },
-        relations: ['content', 'comments'],
-      });
-
-      return posts;
-    } catch (err) {
-      console.log(err);
-      throw new UnauthorizedException('토큰이 만료되었습니다.');
-    }
-  }
-
-  async findPostById(post_id: number) {
-    const post = await this.postRepository.findOne({
+  async findPostById(post_id: number, qr: QueryRunner) {
+    const post = await qr.manager.findOne(Post, {
       where: {
         id: post_id,
       },
       relations: ['comments', 'content'],
     });
 
+    if (!post) {
+      throw new NotFoundException('해당 포스트가 존재하지 않습니다.');
+    }
+
     return post;
   }
 
-  async getAllPostsByUserId(user_id: number) {
-    const user = await this.userRepository.findOne({
+  async getAllPostsByUserId(user_id: number, qr: QueryRunner) {
+    const user = await qr.manager.findOne(User, {
       where: {
         user_id,
       },
@@ -124,17 +120,17 @@ export class PostService {
       throw new NotFoundException('해당하는 아이디의 사용자를 찾을 수 없습니다.');
     }
 
-    const posts = await this.postRepository.find({
+    const posts = await qr.manager.find(Post, {
       where: {
         user,
       },
     });
 
-    return posts;
+    return posts ? posts : [];
   }
 
-  async updatePostById(post_id: number, updatePostDto: UpdatePostDto) {
-    const post = await this.postRepository.findOne({
+  async updatePostById(post_id: number, updatePostDto: UpdatePostDto, qr: QueryRunner) {
+    const post = await qr.manager.findOne(Post, {
       where: {
         id: post_id,
       },
@@ -144,7 +140,8 @@ export class PostService {
       throw new NotFoundException('아이디에 해당하는 포스트가 없습니다.');
     }
 
-    await this.postRepository.update(
+    await qr.manager.update(
+      Post,
       { id: post_id },
       {
         title: updatePostDto.title,
@@ -154,13 +151,13 @@ export class PostService {
       },
     );
 
-    await this.contentService.update(post.content.id, { content: updatePostDto.content });
+    await qr.manager.update(Content, post.content.id, { content: updatePostDto.content });
 
     return post_id;
   }
 
-  async deletePostById(post_id: number) {
-    const post = await this.postRepository.findOne({
+  async deletePostById(post_id: number, qr: QueryRunner) {
+    const post = await qr.manager.findOne(Post, {
       where: {
         id: post_id,
       },
@@ -170,7 +167,8 @@ export class PostService {
       throw new NotFoundException('아이디에 해당하는 포스트가 없습니다.');
     }
 
-    await this.postRepository.update(
+    await qr.manager.update(
+      Post,
       { id: post_id },
       {
         is_deleted: true,
