@@ -129,7 +129,20 @@ export class PostService {
     return posts ? posts : [];
   }
 
-  async updatePostById(post_id: number, updatePostDto: UpdatePostDto, qr: QueryRunner) {
+  async updatePostById(
+    post_id: number,
+    updatePostDto: UpdatePostDto,
+    accessToken: string,
+    qr: QueryRunner,
+  ) {
+    const payload: JwtPayloadInterface = await this.jwtService.verifyAsync(accessToken, {
+      secret: this.configService.get<string>('ACCESS_TOKEN_SECRET'),
+    });
+
+    const user = await qr.manager.findOne(User, {
+      where: { user_id: payload.sub },
+    });
+
     const post = await qr.manager.findOne(Post, {
       where: {
         id: post_id,
@@ -138,6 +151,10 @@ export class PostService {
 
     if (!post) {
       throw new NotFoundException('아이디에 해당하는 포스트가 없습니다.');
+    }
+
+    if (post.user !== user) {
+      throw new UnauthorizedException('포스트의 작성자가 아닙니다.');
     }
 
     await qr.manager.update(
@@ -156,7 +173,15 @@ export class PostService {
     return post_id;
   }
 
-  async deletePostById(post_id: number, qr: QueryRunner) {
+  async deletePostById(post_id: number, accessToken: string, qr: QueryRunner) {
+    const payload: JwtPayloadInterface = await this.jwtService.verifyAsync(accessToken, {
+      secret: this.configService.get<string>('ACCESS_TOKEN_SECRET'),
+    });
+
+    const user = await qr.manager.findOne(User, {
+      where: { user_id: payload.sub },
+    });
+
     const post = await qr.manager.findOne(Post, {
       where: {
         id: post_id,
@@ -165,6 +190,10 @@ export class PostService {
 
     if (!post) {
       throw new NotFoundException('아이디에 해당하는 포스트가 없습니다.');
+    }
+
+    if (post.user !== user) {
+      throw new UnauthorizedException('포스트의 작성자가 아닙니다.');
     }
 
     await qr.manager.update(
